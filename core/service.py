@@ -1,3 +1,4 @@
+# core/service.py
 from datetime import datetime, timedelta
 
 
@@ -6,97 +7,91 @@ class Service():
         self.db = db
         self.mailer = mailer
         self.footballApi = footballApi
+        self.checkTeamsInDb()
 
-        self.CheckTeamsInDb()
-
-
-
-    def CheckTeamsInDb(self):
-
-        status, err = self.db.isTeamsEmpty()
+    def checkTeamsInDb(self):
+        isEmpty, err = self.db.isTeamsEmpty()
         if err is not None:
             print(err)
             return err
-        
-        if status == 0:
-            print("Teams déjà présentes")
+
+        if isEmpty is False:
+            print("Teams already in database")
             return
 
-        teams, err = self.footballApi.GetTeams()
-
+        teams, err = self.footballApi.getTeams()
         if err is not None:
-            print(f"Erreur récupération équipes: {err}")
-            return
-
-        success, err = self.db.insertTeamsinfos(teams)
-
-        if err is not None:
-            print(f"Erreur insertion DB: {err}")
-            return
-
-        print(f"{len(teams)} équipes ajoutées")
-    
-            
-    def addSubscribers(self, email, frequency):
-        err = self.db.insertSubscribers(email, frequency)
-        if err is not None:
-            print(f"Erreur lors de l'ajout du subscribers email: {email} err: {err}")
+            print(f"Error fetching teams: {err}")
             return err
-        return "Subscribers ajouté avec succès" 
-    
 
-    def addSubscription(self, email, teams):
+        success, err = self.db.upsertTeamsInfo(teams)
+        if err is not None:
+            print(f"Error inserting teams into DB: {err}")
+            return err
 
-        subscriber, err = self.db.getSubscribersByEmail(email)
-        if err is not None or subscriber is None:
-            print(f"Erreur lors de la récupération de l'id {err}")
+        print(f"{len(teams)} teams inserted")
 
-        for team in teams:
-            teamId, err = self.db.getTeamsId(team)
+    def createSubscriber(self, email, frequency):
+        frequency = (frequency or "").upper()
+        err = self.db.insertSubscriber(email, frequency)
+        if err is not None:
+            print(f"Error creating subscriber email={email} err={err}")
+            return str(err)
+        return "Subscriber created successfully"
+
+    def createSubscriptions(self, email, teams):
+        subscriberId, err = self.db.getSubscriberIdByEmail(email)
+        if err is not None or subscriberId is None:
+            print(f"Error fetching subscriber id: {err}")
+            return "Subscriber not found"
+
+        created = 0
+
+        for teamName in teams:
+            teamId, err = self.db.getTeamIdByName(teamName)
             if err is not None or teamId is None:
-                print(f"Erreur lors de la recherche de la team {team}: {err}")
+                print(f"Error finding team '{teamName}': {err}")
                 continue
-        
 
-            status, err = self.db.insertSubscriptions(subscriber, teamId)
+            _, err = self.db.insertSubscription(subscriberId, teamId)
             if err is not None:
-                print(f"Erreur lors de l'ajout de cette subscription: {err}")
+                print(f"Error creating subscription: {err}")
                 continue
 
-            return f"Subscription ajoutée avec succès"
+            created += 1
 
+        if created == 0:
+            return "No subscriptions created"
+        return f"{created} subscription(s) created"
 
-    def getSendtoday(self):
+    def sendToday(self):
         isSunday = datetime.now().weekday() == 6
-        frequencies = ["daily", "weekly"] if isSunday else ["daily"]
-        emailSend = []
-        subscribers, err = self.db.getAllSubscribersForFrequency(frequencies)
-        if err is not None or subscribers is None:
-            print(f"Erreur lors de la récupération des abonnés: {err}")
-            return f"Erreur lors de la récupération des abonnés: {err}"
-        emailSend.append(subscribers)
+        frequencies = ["DAILY", "WEEKLY"] if isSunday else ["DAILY"]
 
+        subscribers, err = self.db.getSubscribersByFrequencies(frequencies)
+        if err is not None or subscribers is None:
+            print(f"Error fetching subscribers: {err}")
+            return f"Error fetching subscribers: {err}"
+
+        sentTo = []
 
         for subscriber in subscribers:
-            teamsIds, err = self.db.getsubscribersTeams(subscriber["id"])
-            if not teamsIds:
+            teamIds, err = self.db.getSubscriberTeamIds(subscriber["id"])
+            if err is not None or not teamIds:
                 continue
 
             now = datetime.now()
-            toDay = now.strftime("%Y-%d-%m")
-            delta = 1 if subscriber["frequency"] == "daily" else 7
-            tomorrow = (now + timedelta(days=delta)).strftime("%Y-%d-%m")
+            startDate = now.strftime("%Y-%m-%d")
+            delta = 1 if subscriber["frequency"] == "DAILY" else 7
+            endDate = (now + timedelta(days=delta)).strftime("%Y-%m-%d")
 
             matchesEmail = []
 
-            for team_id in teamsIds:
-                matches, err = self.footballApi.GetMatchesDays(toDay, tomorrow, team_id)
-                if err is None and matches is None:
-                    continue
+            for teamId in teamIds:
+                matches, err = self.footballApi.getMatchesBetweenDates(startDate, endDate, teamId)
                 if err is not None:
-                    print(f"Erreur récupération matches team {team_id}: {err}")
-                    return f"Erreur récupération matches team {team_id}: {err}"
-                    continue
+                    print(f"Error fetching matches for team {teamId}: {err}")
+                    return f"Error fetching matches for team {teamId}: {err}"
 
                 if matches:
                     matchesEmail.extend(matches)
@@ -104,60 +99,67 @@ class Service():
             if not matchesEmail:
                 continue
 
-            err = self.mailer.envoieMail(matchesEmail, subscriber["email"])
+            err = self.mailer.sendMail(matchesEmail, subscriber["email"])
             if err is not None:
-                print(f"Erreur lors de l'envoi du mail: {err}")
-                return f"Erreur lors de l'envoi du mail: {err}"
-        return emailSend
-    def getTeamsOfsubscribers(self, subscribersEmail):
-            subscribersId, err = self.db.getSubscribersByEmail(subscribersEmail)
-            if err is not None:
-                print(f"Erreur lors de la récupération de l'id via l'email")
-                return None
-            teamsIds, err = self.db.getsubscribersTeams(subscribersId)
-            if err is not None:
-                print(f"Erreur lors de la récupération des teams de l'utilisateur: {err}")
-                return None
-            return teamsIds
-    
-    def getNameTeamsOfSubscribers(self, subscribersEmail):
-            subscribersId, err = self.db.getSubscribersByEmail(subscribersEmail)
-            if err is not None:
-                print(f"Erreur lors de la récupération de l'id via l'email")
-                return None
-            teamsNames, err = self.db.getsubscribersTeamsNames(subscribersId)
-            if err is not None:
-                print(f"Erreur lors de la récupération des teams de l'utilisateur: {err}")
-                return None
-            return teamsNames
-    
-    def deleteTeamsOfSubscribers(self, subscribersEmail, team):
-            subscribersId, err = self.db.getSubscribersByEmail(subscribersEmail)
-            if err is not None:
-                print(f"Erreur lors de la récupération de l'id via l'email")
-                return None
-            teamid, err = self.db.getTeamsId(team[0])
-            if err is not None:
-                print("erreur lors de la recherche de l'id de la team")
-                return None
-            err = self.db.deleteTeamFromSubscribtion(subscribersId, teamid)
-            if err is not None:
-                return None
-            return True
-    
-    def deleteSubscribers(self, subscribersEmail):
-            subscribersId, err = self.db.getSubscribersByEmail(subscribersEmail)
-            if err is not None:
-                print(f"Erreur lors de la récupération de l'id via l'email")
-                return None
-            err = self.db.deleteSubscribers(subscribersId)
-            if err is not None:
-                return None
-            return True
-    
+                print(f"Error sending email: {err}")
+                return f"Error sending email: {err}"
+
+            sentTo.append(subscriber["email"])
+
+        return {"sentTo": sentTo, "count": len(sentTo)}
+
+    def getSubscriberTeamNames(self, subscriberEmail):
+        subscriberId, err = self.db.getSubscriberIdByEmail(subscriberEmail)
+        if err is not None or subscriberId is None:
+            print("Error getting subscriber id from email")
+            return None
+
+        teamNames, err = self.db.getSubscriberTeamNames(subscriberId)
+        if err is not None:
+            print(f"Error getting subscriber teams: {err}")
+            return None
+
+        return teamNames
+
+    def deleteSubscriberTeam(self, subscriberEmail, teamName):
+        subscriberId, err = self.db.getSubscriberIdByEmail(subscriberEmail)
+        if err is not None or subscriberId is None:
+            print("Error getting subscriber id from email")
+            return False
+
+        teamId, err = self.db.getTeamIdByName(teamName)
+        if err is not None or teamId is None:
+            print("Error getting team id from team name")
+            return False
+
+        err = self.db.deleteSubscription(subscriberId, teamId)
+        if err is not None:
+            return False
+
+        return True
+
+    def deleteSubscriberByEmail(self, subscriberEmail):
+        subscriberId, err = self.db.getSubscriberIdByEmail(subscriberEmail)
+        if err is not None or subscriberId is None:
+            print("Error getting subscriber id from email")
+            return False
+
+        err = self.db.deleteSubscriber(subscriberId)
+        if err is not None:
+            return False
+
+        return True
+
     def getAllSubscribers(self):
         subscribers, err = self.db.getAllSubscribers()
         if err is not None:
-            print(f"Erreur lors de la récupération des subscribers")
+            print("Error fetching subscribers")
             return None
         return subscribers
+    
+    def searchTeams(self, query):
+        rows, err = self.db.searchTeams(query)
+        if err is not None:
+            print(f"Error searching teams: {err}")
+            return None
+        return rows

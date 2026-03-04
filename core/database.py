@@ -2,15 +2,15 @@ import sqlite3
 import threading
 from pathlib import Path
 
+
 class Database():
     def __init__(self, dbPath="data/app.db"):
-        self.DatabasePath = Path(dbPath)
-        self.DatabasePath.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.DatabasePath, check_same_thread=False)
+        self.databasePath = Path(dbPath)
+        self.databasePath.parent.mkdir(parents=True, exist_ok=True)
+        self.conn = sqlite3.connect(self.databasePath, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.lock = threading.Lock()
-
 
     def initDb(self):
         try:
@@ -18,11 +18,12 @@ class Database():
 
             self.conn.execute(
                 """CREATE TABLE IF NOT EXISTS subscribers(
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,               
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     email TEXT UNIQUE NOT NULL,
                     frequency TEXT DEFAULT 'WEEKLY')
-                    """)
-            
+                    """
+            )
+
             self.conn.execute(
                 """CREATE TABLE IF NOT EXISTS teams(
                     id INTEGER PRIMARY KEY,
@@ -37,82 +38,89 @@ class Database():
                     venue TEXT,
                     last_updated_on_api TEXT,
                     last_update_on_db TEXT DEFAULT CURRENT_TIMESTAMP)
-                    """)
-            
-            self.conn.execute("""
-                CREATE TABLE IF NOT EXISTS subscriptions (
+                    """
+            )
+
+            self.conn.execute(
+                """CREATE TABLE IF NOT EXISTS subscriptions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     subscriber_id INTEGER NOT NULL,
                     team_id INTEGER NOT NULL,
                     UNIQUE(subscriber_id, team_id),
                     FOREIGN KEY (subscriber_id) REFERENCES subscribers(id) ON DELETE CASCADE,
                     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE)
-                    """)
+                    """
+            )
+
             self.conn.commit()
             return None
         except Exception as e:
             self.conn.rollback()
             return e
 
-    def insertSubscribers(self, email, frequency):
+    def insertSubscriber(self, email, frequency):
         try:
             with self.lock:
-                cursor = self.conn.execute("""
-                    INSERT INTO subscribers 
-                        (email, frequency)
-                        VALUES(?,?)
-                        """, 
-                        (email, frequency))
+                self.conn.execute(
+                    """
+                    INSERT INTO subscribers (email, frequency)
+                    VALUES(?,?)
+                    """,
+                    (email, frequency)
+                )
                 self.conn.commit()
                 return None
         except Exception as e:
             return e
-        
-    def insertTeamsinfos(self, teams):
+
+    def upsertTeamsInfo(self, teams):
         try:
             with self.lock:
                 self.conn.execute("BEGIN")
-                cursor = self.conn.executemany("""
+                self.conn.executemany(
+                    """
                     INSERT OR REPLACE INTO teams
                     (id, name, short_name, tla, crest, address, website, founded, club_colors, venue, last_updated_on_api)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, [
-                    (
-                        t["id"],
-                        t["name"],
-                        t["shortName"],
-                        t["tla"],
-                        t["crest"],
-                        t["address"],
-                        t["website"],
-                        t["founded"],
-                        t["clubColors"],
-                        t["venue"],
-                        t["lastUpdated"]
-                    )
-                    for t in teams
-                ])
-
+                    """,
+                    [
+                        (
+                            t["id"],
+                            t["name"],
+                            t["shortName"],
+                            t["tla"],
+                            t["crest"],
+                            t["address"],
+                            t["website"],
+                            t["founded"],
+                            t["clubColors"],
+                            t["venue"],
+                            t["lastUpdated"]
+                        )
+                        for t in teams
+                    ]
+                )
                 self.conn.commit()
                 return True, None
         except Exception as e:
             self.conn.rollback()
             return False, e
-    
-    def insertSubscriptions(self, subscriberId, teamId):
+
+    def insertSubscription(self, subscriberId, teamId):
         try:
             with self.lock:
-                cursor = self.conn.execute("""
-                            INSERT INTO subscriptions
-                            (subscriber_id, team_id)
-                            VALUES(?,?)
-                            """,
-                            (subscriberId, teamId))
+                cursor = self.conn.execute(
+                    """
+                    INSERT INTO subscriptions (subscriber_id, team_id)
+                    VALUES(?,?)
+                    """,
+                    (subscriberId, teamId)
+                )
                 self.conn.commit()
                 return cursor.lastrowid, None
         except Exception as e:
             return None, e
-    
+
     def isTeamsEmpty(self):
         try:
             with self.lock:
@@ -120,7 +128,6 @@ class Database():
                 return row["c"] == 0, None
         except Exception as e:
             return None, e
-
 
     def getAllSubscribers(self):
         try:
@@ -130,101 +137,129 @@ class Database():
         except Exception as e:
             return None, e
 
-                
-
-    def getTeamsId(self, teamName):
+    def getTeamIdByName(self, teamName):
         try:
             with self.lock:
-                row = self.conn.execute("""
+                row = self.conn.execute(
+                    """
                     SELECT id FROM teams
                     WHERE name = ?
-                    """, (teamName,)).fetchone()
+                    """,
+                    (teamName,)
+                ).fetchone()
                 return row["id"] if row else None, None
         except Exception as e:
-            return None, str(e)        
-    
-    def getAllSubscribersForFrequency(self, frequencies):
+            return None, str(e)
+
+    def getSubscribersByFrequencies(self, frequencies):
         try:
             with self.lock:
                 placeholders = ",".join(["?"] * len(frequencies))
-
                 query = f"""
                     SELECT *
                     FROM subscribers
                     WHERE frequency IN ({placeholders})
                 """
-
                 rows = self.conn.execute(query, frequencies).fetchall()
-
                 return [dict(row) for row in rows], None
-
         except Exception as e:
             return None, str(e)
-        
-    def getsubscribersTeams(self, subscribersId):
+
+    def getSubscriberTeamIds(self, subscriberId):
         try:
             with self.lock:
-                rows = self.conn.execute("""
-                            SELECT t.id
-                            FROM teams t
-                            JOIN subscriptions s ON s.team_id = t.id
-                            WHERE s.subscriber_id = ?
-                            """, (subscribersId,)).fetchall()
-                teamsIds = [row["id"] for row in rows]
-                return teamsIds, None
-        except Exception as e:
-            return None, e
-        
-    def getsubscribersTeamsNames(self, subscribersId):
-        try:
-            with self.lock:
-                rows = self.conn.execute("""
-                            SELECT t.name
-                            FROM teams t
-                            JOIN subscriptions s ON s.team_id = t.id
-                            WHERE s.subscriber_id = ?
-                            """, (subscribersId,)).fetchall()
-                teamsNames = [row["name"] for row in rows]
-                return teamsNames, None
+                rows = self.conn.execute(
+                    """
+                    SELECT t.id
+                    FROM teams t
+                    JOIN subscriptions s ON s.team_id = t.id
+                    WHERE s.subscriber_id = ?
+                    """,
+                    (subscriberId,)
+                ).fetchall()
+                return [row["id"] for row in rows], None
         except Exception as e:
             return None, e
 
-    def getSubscribersByEmail(self, email):
+    def getSubscriberTeamNames(self, subscriberId):
         try:
             with self.lock:
-                row = self.conn.execute("""
-                            SELECT id
-                            FROM subscribers
-                            WHERE email = ?
-                            """, (email,)).fetchone()
+                rows = self.conn.execute(
+                    """
+                    SELECT t.name
+                    FROM teams t
+                    JOIN subscriptions s ON s.team_id = t.id
+                    WHERE s.subscriber_id = ?
+                    """,
+                    (subscriberId,)
+                ).fetchall()
+                return [row["name"] for row in rows], None
+        except Exception as e:
+            return None, e
+
+    def getSubscriberIdByEmail(self, email):
+        try:
+            with self.lock:
+                row = self.conn.execute(
+                    """
+                    SELECT id
+                    FROM subscribers
+                    WHERE email = ?
+                    """,
+                    (email,)
+                ).fetchone()
                 return row["id"] if row else None, None
         except Exception as e:
             return None, e
-    
-    def deleteTeamFromSubscribtion(self, subscribersId, team):
+
+    def deleteSubscription(self, subscriberId, teamId):
         try:
             with self.lock:
-                self.conn.execute("""
-                        DELETE FROM subscriptions
-                        where subscriber_id = ? AND  team_id = ?
-                        """,(subscribersId, team))
+                self.conn.execute(
+                    """
+                    DELETE FROM subscriptions
+                    WHERE subscriber_id = ? AND team_id = ?
+                    """,
+                    (subscriberId, teamId)
+                )
                 self.conn.commit()
                 return None
         except Exception as e:
             self.conn.rollback()
             return e
-        
-    def deleteSubscribers(self, subscribersId):
+
+    def deleteSubscriber(self, subscriberId):
         try:
             with self.lock:
-                self.conn.execute("""
+                self.conn.execute(
+                    """
                     DELETE FROM subscribers
-                    where id =?
-                    """,(subscribersId,))
-                
-            self.conn.commit()
-            return None
+                    WHERE id = ?
+                    """,
+                    (subscriberId,)
+                )
+                self.conn.commit()
+                return None
         except Exception as e:
             self.conn.rollback()
             return e
 
+    def searchTeams(self, query):
+        try:
+            with self.lock:
+                search = f"%{query}%"
+                rows = self.conn.execute(
+                    """
+                    SELECT name
+                    FROM teams
+                    WHERE name LIKE ? COLLATE NOCASE
+                       OR short_name LIKE ? COLLATE NOCASE
+                    ORDER BY name
+                    LIMIT 20
+                    """,
+                    (search, search)
+                ).fetchall()
+                return [row["name"] for row in rows], None
+        except Exception as e:
+            return None, e
+            
