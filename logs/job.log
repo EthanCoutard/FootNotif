@@ -1,28 +1,80 @@
-============================== 
-05/03/2026  0:22:30,70 Starting job 
-============================== 
-05/03/2026  0:22:40,63 Starting job 
-============================== 
-05/03/2026  0:23:00,03 Starting job 
 ==============================
-05/03/2026  0:23:44,32 Starting job
-API not running, starting...
+2026-03-05 16:31:55 Starting job
 ==============================
-05/03/2026  0:24:47,37 Starting job
-API not running, starting...
-API started successfully
-Sending notifications
+2026-03-05 16:34:55 Starting job
+==============================
+2026-03-05 16:35:49 Starting job
+==============================
+2026-03-05 16:36:48 Starting job
+2026-03-05 16:36:48 API not running, starting...
+2026-03-05 16:37:08 API failed to start
+INFO:     Started server process [17296]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+==============================
+2026-03-06 00:00:02 Starting job
+500 teams fetched
+1000 teams fetched
+1500 teams fetched
+2000 teams fetched
+2500 teams fetched
+3000 teams fetched
+3500 teams fetched
+4000 teams fetched
+4500 teams fetched
+5000 teams fetched
+5500 teams fetched
+Rate limit hit, waiting...
+6000 teams fetched
+6500 teams fetched
+7000 teams fetched
+7500 teams fetched
+8000 teams fetched
+8500 teams fetched
+Rate limit hit, waiting...
+8603 teams fetched
+8603 teams inserted
+INFO:     127.0.0.1:57366 - "GET /health HTTP/1.1" 200 OK
+2026-03-06 00:00:02 Sending notifications
+INFO:     127.0.0.1:57376 - "GET /notifications/send HTTP/1.1" 405 Method Not Allowed
 {"detail":"Method Not Allowed"}
-Job finished
+2026-03-06 00:00:02 Job finished
 ==============================
-05/03/2026  0:28:02,38 Starting job
-API not running, starting...
-API started successfully
-Sending notifications
+2026-03-07 00:00:01 Starting job
+INFO:     127.0.0.1:33950 - "GET /health HTTP/1.1" 200 OK
+2026-03-07 00:00:01 Sending notifications
+INFO:     127.0.0.1:33966 - "GET /notifications/send HTTP/1.1" 405 Method Not Allowed
 {"detail":"Method Not Allowed"}
-Job finished
+2026-03-07 00:00:01 Job finished
 ==============================
-05/03/2026  0:29:01,07 Starting job
-Sending notifications
-{"sentTo":["ethanou21@gmail.com"],"count":1}
-Job finished
+2026-03-08 00:00:01 Starting job
+INFO:     127.0.0.1:35250 - "GET /health HTTP/1.1" 200 OK
+2026-03-08 00:00:01 Sending notifications
+INFO:     127.0.0.1:35252 - "GET /notifications/send HTTP/1.1" 405 Method Not Allowed
+{"detail":"Method Not Allowed"}
+2026-03-08 00:00:01 Job finished
+==============================
+2026-03-09 00:00:01 Starting job
+INFO:     127.0.0.1:41598 - "GET /health HTTP/1.1" 200 OK
+2026-03-09 00:00:01 Sending notifications
+INFO:     127.0.0.1:41602 - "GET /notifications/send HTTP/1.1" 405 Method Not Allowed
+{"detail":"Method Not Allowed"}
+2026-03-09 00:00:01 Job finished
+==============================
+2026-03-10 00:00:01 Starting job
+INFO:     127.0.0.1:50966 - "GET /health HTTP/1.1" 200 OK
+2026-03-10 00:00:01 Sending notifications
+INFO:     127.0.0.1:50968 - "GET /notifications/send HTTP/1.1" 405 Method Not Allowed
+{"detail":"Method Not Allowed"}
+2026-03-10 00:00:01 Job finished
+==============================
+2026-03-12 21:57:50 Starting job
+2026-03-12 21:57:50 Sending notifications
+{"detail":"Method Not Allowed"}
+2026-03-12 21:57:50 Job finished
+==============================
+2026-03-12 21:59:55 Starting job
+2026-03-12 21:59:55 Sending notifications
+{"sentTo":[],"count":0}
+2026-03-12 21:59:55 Job finished

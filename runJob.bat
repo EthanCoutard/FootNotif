@@ -4,22 +4,33 @@ setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 
 if not exist logs mkdir logs
-set logFile=logs\job.log
+set "logFile=logs\job.log"
 
+for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
 echo ==============================>>"%logFile%"
-echo %date% %time% Starting job>>"%logFile%"
+echo !now! Starting job>>"%logFile%"
 
 if exist .env (
-  for /f "usebackq delims=" %%x in (".env") do set "%%x"
+  for /f "usebackq tokens=* delims=" %%x in (".env") do (
+    if not "%%x"=="" if not "%%x:~0,1%"=="#" set "%%x"
+  )
 )
 
-set apiUrl=http://127.0.0.1:8000
+set "apiUrl=http://127.0.0.1:%API_PORT%"
 
 for /f %%s in ('curl -s -o nul -w "%%{http_code}" "%apiUrl%/health"') do set "status=%%s"
 
 if not "!status!"=="200" (
-  echo API not running, starting...>>"%logFile%"
-  start "" /b cmd /c "py -3.14 app.py"
+  for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
+  echo !now! API not running, starting...>>"%logFile%"
+
+  tasklist /v /fi "imagename eq python.exe" | findstr /i "app.py" >nul
+  if !errorlevel! equ 0 (
+    for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
+    echo !now! API process seems already starting, waiting...>>"%logFile%"
+  ) else (
+    start "" /b cmd /c ".env/bin/python3 app.py >> \"%logFile%\" 2>&1"
+  )
 
   set tries=0
 
@@ -30,23 +41,27 @@ if not "!status!"=="200" (
   for /f %%s in ('curl -s -o nul -w "%%{http_code}" "%apiUrl%/health"') do set "status=%%s"
 
   if "!status!"=="200" (
-    echo API started successfully>>"%logFile%"
+    for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
+    echo !now! API started successfully>>"%logFile%"
     goto sendMail
   )
 
-  if !tries! GEQ 10 (
-    echo API failed to start>>"%logFile%"
-    goto end
+  if !tries! GEQ 20 (
+    for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
+    echo !now! API failed to start>>"%logFile%"
+    exit /b 1
   )
 
   goto waitLoop
 )
 
 :sendMail
-echo Sending notifications>>"%logFile%"
+for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
+echo !now! Sending notifications>>"%logFile%"
 curl -s -X POST "%apiUrl%/notifications/send" >>"%logFile%"
 echo.>>"%logFile%"
-echo Job finished>>"%logFile%"
+for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
+echo !now! Job finished>>"%logFile%"
 
-:end
 endlocal
+exit /b 0

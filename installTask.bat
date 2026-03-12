@@ -13,5 +13,4 @@ if %errorlevel%==0 (
     schtasks /create /sc daily /st 00:00 /tn "%taskName%" /tr "\"%jobPath%\"" /f
 )
 
-pause
 endlocal

@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
+from fastapi.middleware.cors import CORSMiddleware
 
 
 class SubscriberCreate(BaseModel):
@@ -31,6 +32,18 @@ class MessageResponse(BaseModel):
 
 def createApp(service):
     app = FastAPI(title="Football Match Notifier API")
+
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://192.168.1.36:5173",
+            "http://localhost:5173",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/health", response_model=MessageResponse)
     def healthCheck():

@@ -8,6 +8,8 @@ API_TOKEN = os.getenv("API_TOKEN")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT"))
+API_PORT = int(os.getenv("API_PORT"))
+
 
 if not API_TOKEN:
     raise Exception("API_TOKEN manquant dans .env")

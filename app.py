@@ -5,7 +5,7 @@ from core.mailer import Mailer
 from core.service import Service
 from api.api import createApp
 import uvicorn
-
+from config import API_PORT
 
 def main():
     db = Database()
@@ -19,7 +19,7 @@ def main():
     service = Service(db, mailer, footballApi)
 
     app = createApp(service)
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=API_PORT)
 
 
 if __name__ == "__main__":
