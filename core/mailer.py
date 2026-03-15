@@ -172,6 +172,10 @@ class Mailer():
             msg["Subject"] = "Match Notifications"
             msg["From"] = senderEmail
             msg["To"] = receiverEmail
+            msg["x-priority"] = "1"
+            msg["priority"] = "urgent"
+            msg["X-MSMail-Priority"] = "High"
+            msg["Importance"] = "High"
             msg.attach(MIMEText(html, "html", "utf-8"))
 
             server = smtplib.SMTP(smtpServer, port)

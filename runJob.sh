@@ -49,7 +49,14 @@ if [ "$status" != "200" ]; then
   done
 fi
 
+
 echo "$(date '+%Y-%m-%d %H:%M:%S') Sending notifications" >> "$logFile"
 curl -s -X POST "$apiUrl/notifications/send" >> "$logFile"
 echo >> "$logFile"
+pid=$(pgrep -f app.py)
+if [ -n "$pid" ]; then
+  echo "$(date '+%Y-%m-%d %H:%M:%S') Stopping API (PID $pid)" >> "$logFile"
+  kill "$pid"
+fi
+echo "$(date '+%Y-%m-%d %H:%M:%S') app.py stopped" >> "$logFile"
 echo "$(date '+%Y-%m-%d %H:%M:%S') Job finished" >> "$logFile"

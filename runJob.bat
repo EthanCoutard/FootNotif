@@ -16,6 +16,7 @@ if exist .env (
   )
 )
 
+set "pythonBin=%cd%\.venv\Scripts\python.exe"
 set "apiUrl=http://127.0.0.1:%API_PORT%"
 
 for /f %%s in ('curl -s -o nul -w "%%{http_code}" "%apiUrl%/health"') do set "status=%%s"
@@ -24,12 +25,12 @@ if not "!status!"=="200" (
   for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
   echo !now! API not running, starting...>>"%logFile%"
 
-  tasklist /v /fi "imagename eq python.exe" | findstr /i "app.py" >nul
+  wmic process where "CommandLine like '%%app.py%%'" get ProcessId | findstr /r "[0-9]" >nul
   if !errorlevel! equ 0 (
     for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
     echo !now! API process seems already starting, waiting...>>"%logFile%"
   ) else (
-    start "" /b cmd /c ".env/bin/python3 app.py >> \"%logFile%\" 2>&1"
+    start "" /b cmd /c ""%pythonBin%" app.py >> "%logFile%" 2>&1"
   )
 
   set tries=0
@@ -60,8 +61,14 @@ for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH
 echo !now! Sending notifications>>"%logFile%"
 curl -s -X POST "%apiUrl%/notifications/send" >>"%logFile%"
 echo.>>"%logFile%"
+
+for /f "tokens=2 delims=," %%i in ('wmic process where "CommandLine like '%%app.py%%'" get ProcessId /format:csv ^| findstr /r "[0-9]"') do taskkill /PID %%i /F
 for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
-echo !now! Job finished>>"%logFile%"
+echo !now! app.py stopped>>"%logFile%"
+
+for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "now=%%i"
+echo !now! Job finished>>"%logFile%
+
 
 endlocal
 exit /b 0

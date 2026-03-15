@@ -219,3 +219,41 @@ INFO:     Finished server process [20938]
 2026-03-15 00:00:01 Sending notifications
 {"sentTo":["ethancoutard@gmail.com","riyanchakibi@gmail.com"],"count":2}
 2026-03-15 00:00:06 Job finished
+==============================
+2026-03-15 01:05:39 Starting job
+2026-03-15 01:05:39 API not running, starting...
+INFO:     Started server process [24533]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+Teams already in database
+INFO:     127.0.0.1:41848 - "GET /health HTTP/1.1" 200 OK
+2026-03-15 01:05:40 API started successfully
+2026-03-15 01:05:40 Sending notifications
+INFO:     127.0.0.1:41852 - "POST /notifications/send HTTP/1.1" 200 OK
+{"sentTo":["ethancoutard@gmail.com","riyanchakibi@gmail.com"],"count":2}
+2026-03-15 01:05:42 Job finished
+INFO:     192.168.1.193:62521 - "GET /subscribers HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [24533]
+==============================
+2026-03-15 01:23:53 Starting job
+2026-03-15 01:23:53 API not running, starting...
+INFO:     Started server process [24830]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+Teams already in database
+INFO:     127.0.0.1:35230 - "GET /health HTTP/1.1" 200 OK
+2026-03-15 01:23:54 API started successfully
+2026-03-15 01:23:54 Sending notifications
+INFO:     127.0.0.1:35244 - "POST /notifications/send HTTP/1.1" 200 OK
+{"sentTo":["ethancoutard@gmail.com","riyanchakibi@gmail.com","ethanou21@gmail.com"],"count":3}
+2026-03-15 01:23:57 Job finished
+2026-03-15 01:23:57 Stopping API (PID 24830)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [24830]
