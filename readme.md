@@ -379,8 +379,6 @@ curl "http://127.0.0.1:8000/teams/search?q=paris"
 curl -X POST "http://127.0.0.1:8000/notifications/send"
 ```
 
-❌ peaufiner MM en remontant
-
 ## Project structure <!-- markmap: fold -->
 
 ```v
@@ -452,5 +450,3 @@ git push origin feat/my-feature
 
 - License file isn't included yet.
 - [GitHub Repository](https://github.com/EthanCoutard/FootNotif)
-
-❌ Faire lien Doc → page HTML de la MM
